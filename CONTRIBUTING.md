@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for considering a contribution! This is a small, stdlib-only Python project — easy to run, easy to change.
+Thanks for considering a contribution to the H&K Brothers dashboard. This is a small, stdlib-only Python project — easy to run, easy to change.
 
 ## Running the tests
 
@@ -28,7 +28,7 @@ Open http://127.0.0.1:8080 in your browser. The server re-scans every 30 seconds
 - **Type hints where they aid readability.** Not a hard requirement, but helpful on function signatures.
 - **Docstrings explain *why*, not *what*.** The code already shows what.
 
-Component layout: `cli.py` (entry points) → `token_dashboard/scanner.py` (JSONL → SQLite) → `token_dashboard/db.py` (query helpers) → `token_dashboard/server.py` (HTTP + SSE + `/api/*` routes) → `web/` (vanilla JS UI). See [`CLAUDE.md`](CLAUDE.md) for the short architecture overview. To add a new API route: add a handler branch in `token_dashboard/server.py`, put the SQL in a helper in `token_dashboard/db.py`, and add a test under `tests/`.
+Component layout: `cli.py` (entry points) → `token_dashboard/scanner.py` (JSONL → SQLite) → `token_dashboard/db.py` (query helpers) → `token_dashboard/server.py` (HTTP + SSE + `/api/*` routes) → `web/` (vanilla JS UI). See [`CODEX.md`](CODEX.md) for the short architecture overview. To add a new API route: add a handler branch in `token_dashboard/server.py`, put the SQL in a helper in `token_dashboard/db.py`, and add a test under `tests/`.
 
 ## Opening a pull request
 
@@ -41,7 +41,7 @@ Component layout: `cli.py` (entry points) → `token_dashboard/scanner.py` (JSON
 
 ## Ideas that would genuinely help
 
-- Broadening the Skills catalog scan to cover project-local `.claude/skills/` directories (closes the known limitation).
+- Broadening the Skills catalog scan to cover project-local `.codex/skills/` directories (closes the known limitation).
 - A CSV or JSON export of any route.
 - A session-filter UI (currently everything is all-time or implicit-"recent").
 - A GitHub Actions workflow that runs the tests on push.

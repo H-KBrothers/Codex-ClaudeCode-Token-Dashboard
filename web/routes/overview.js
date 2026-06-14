@@ -33,6 +33,8 @@ function withSince(url, since) {
 export default async function (root) {
   const range = readRange();
   const since = sinceIso(range);
+  const p = state.palette;
+  const sourceLabel = state.source === 'claude' ? 'Claude Code' : 'Codex';
 
   const [totals, projects, sessions, tools, daily, byModel] = await Promise.all([
     api(withSince('/api/overview', since)),
@@ -74,7 +76,7 @@ export default async function (root) {
       ${kpi('Cache read',   fmt.compact(totals.cache_read_tokens),  fmt.int(totals.cache_read_tokens) + ' tokens')}
       ${kpi('Cache create', fmt.compact(cacheCreate),               fmt.int(cacheCreate) + ' tokens')}
       <div class="card kpi cost">
-        <div class="label">Est. cost</div>
+        <div class="label">API-equiv cost</div>
         <div class="value" title="${fmt.usd(totals.cost_usd)}">${fmt.usd(totals.cost_usd)}</div>
         ${planSubtitle()}
       </div>
@@ -83,25 +85,25 @@ export default async function (root) {
     <details class="card glossary" style="margin-top:16px">
       <summary><h3 style="display:inline-block;margin:0">What do these numbers mean?</h3><span class="muted" style="font-size:12px">— click to expand</span></summary>
       <dl>
-        <dt>Session</dt><dd>One run of Claude Code (from <code>claude</code> to exit). Each session is a single <code>.jsonl</code> file.</dd>
-        <dt>Turn</dt><dd>One message you sent to Claude. Each turn triggers a response (possibly with tool calls in between).</dd>
-        <dt>Input tokens</dt><dd>The new text you (and tool results) sent to Claude this turn. Billed at the full input rate.</dd>
-        <dt>Output tokens</dt><dd>The text Claude wrote back. Billed at the highest rate — usually the biggest cost driver per turn.</dd>
-        <dt>Cache read</dt><dd>Tokens Claude re-used from a cache (your CLAUDE.md, previously-read files, the conversation so far). ~10× cheaper than fresh input. High cache-read counts = good cost hygiene.</dd>
-        <dt>Cache create</dt><dd>Writing something into the cache for the first time. One-time cost; pays off on the next turn.</dd>
-        <dt>Billable tokens</dt><dd>Input + Output + Cache create. Cache reads are billed separately (and much cheaper).</dd>
+        <dt>Session</dt><dd>One ${sourceLabel} run read from local <code>.jsonl</code> transcript files.</dd>
+        <dt>Turn</dt><dd>One message you sent to ${sourceLabel}. A turn can include several tool calls and model calls.</dd>
+        <dt>Input tokens</dt><dd>Fresh input tokens reported by ${sourceLabel}. Cached input is split out below when the transcript provides it.</dd>
+        <dt>Output tokens</dt><dd>Visible output plus reasoning output when available for each model call.</dd>
+        <dt>Cache read</dt><dd>Cached input tokens reported by ${sourceLabel}. These are shown as usage, not converted into a savings estimate.</dd>
+        <dt>Cache create</dt><dd>Prompt-cache creation tokens when the transcript includes explicit 5-minute or 1-hour cache buckets.</dd>
+        <dt>Billable tokens</dt><dd>Fresh input + output + any cache-create bucket. Cache reads are shown separately.</dd>
       </dl>
     </details>
 
     <div class="row cols-2" style="margin-top:16px">
       <div class="card">
         <h3>Your daily work</h3>
-        <p class="muted" style="margin:-4px 0 10px;font-size:12px">Tokens you paid for: what you sent (<b>input</b>), what Claude wrote (<b>output</b>), and what got stored for re-use (<b>cache create</b>).</p>
+        <p class="muted" style="margin:-4px 0 10px;font-size:12px">API-equivalent work: fresh input, output/reasoning, and any explicit cache creation bucket found in logs.</p>
         <div id="ch-daily-billable" style="height:260px"></div>
       </div>
       <div class="card">
         <h3>Daily cache reads</h3>
-        <p class="muted" style="margin:-4px 0 10px;font-size:12px"><b>Cache reads</b> are cheap re-uses of things Claude already saw (like your CLAUDE.md). They cost ~10× less than regular input tokens — high numbers here are a good thing.</p>
+        <p class="muted" style="margin:-4px 0 10px;font-size:12px"><b>Cache reads</b> are reused context reported by ${sourceLabel}. High cache reads usually mean less fresh input is being rebuilt.</p>
         <div id="ch-daily-cache" style="height:260px"></div>
       </div>
     </div>
@@ -110,7 +112,7 @@ export default async function (root) {
       <div class="card"><h3>Tokens by project</h3><div id="ch-projects" style="height:320px"></div></div>
       <div class="card">
         <h3>Token usage by model</h3>
-        <p class="muted" style="margin:-4px 0 4px;font-size:12px">Share of billable tokens per Claude model.</p>
+        <p class="muted" style="margin:-4px 0 4px;font-size:12px">Share of billable tokens per ${sourceLabel} model.</p>
         <div id="ch-model" style="height:300px"></div>
       </div>
     </div>
@@ -143,9 +145,9 @@ export default async function (root) {
   stackedBarChart(document.getElementById('ch-daily-billable'), {
     categories: daily.map(d => d.day),
     series: [
-      { name: 'input',        values: daily.map(d => d.input_tokens),        color: '#4A9EFF' },
-      { name: 'output',       values: daily.map(d => d.output_tokens),       color: '#7C5CFF' },
-      { name: 'cache create', values: daily.map(d => d.cache_create_tokens), color: '#E8A23B' },
+      { name: 'input',        values: daily.map(d => d.input_tokens),        color: p.accent },
+      { name: 'output',       values: daily.map(d => d.output_tokens),       color: p.secondary },
+      { name: 'cache create', values: daily.map(d => d.cache_create_tokens), color: p.warn },
     ],
   });
 
@@ -153,7 +155,7 @@ export default async function (root) {
   stackedBarChart(document.getElementById('ch-daily-cache'), {
     categories: daily.map(d => d.day),
     series: [
-      { name: 'cache read', values: daily.map(d => d.cache_read_tokens), color: '#3FB68B' },
+      { name: 'cache read', values: daily.map(d => d.cache_read_tokens), color: p.good },
     ],
   });
 
@@ -164,6 +166,7 @@ export default async function (root) {
       value: (m.input_tokens || 0) + (m.output_tokens || 0)
            + (m.cache_create_5m_tokens || 0) + (m.cache_create_1h_tokens || 0),
     })).filter(d => d.value > 0),
+    [p.accent, p.secondary, p.good, p.warn, '#DF6A61', '#A18BCE', '#7A94B8'],
   );
 
   // tokens by project — input vs output
@@ -174,8 +177,8 @@ export default async function (root) {
       return name.length > 20 ? name.slice(0, 19) + '…' : name;
     }),
     series: [
-      { name: 'input',  values: topProjects.map(p => p.input_tokens  || 0), color: '#4A9EFF' },
-      { name: 'output', values: topProjects.map(p => p.output_tokens || 0), color: '#7C5CFF' },
+      { name: 'input',  values: topProjects.map(project => project.input_tokens  || 0), color: p.accent },
+      { name: 'output', values: topProjects.map(project => project.output_tokens || 0), color: p.secondary },
     ],
   });
 
@@ -184,13 +187,14 @@ export default async function (root) {
   barChart(document.getElementById('ch-tools'), {
     categories: topTools.map(t => t.tool_name),
     values: topTools.map(t => t.calls),
-    color: '#7C5CFF',
+    color: p.secondary,
   });
 }
 
 function planSubtitle() {
   if (!state.pricing || state.plan === 'api') return '';
   const p = state.pricing.plans[state.plan];
-  if (!p || !p.monthly) return '';
+  if (!p) return '';
+  if (!p.monthly) return `<div class="sub">${fmt.htmlSafe(p.label)} · estimate only</div>`;
   return `<div class="sub">pay $${p.monthly}/mo on ${fmt.htmlSafe(p.label)}</div>`;
 }

@@ -53,7 +53,7 @@ class CatalogTests(unittest.TestCase):
         self.assertIn("superpowers:brainstorming", slugs)
 
     def test_slugs_for_cache_versioned_path(self):
-        p = Path("plugins/cache/claude-plugins-official/superpowers/5.0.7/skills/brainstorming/SKILL.md")
+        p = Path("plugins/cache/openai-curated/superpowers/5.0.7/skills/brainstorming/SKILL.md")
         slugs = set(_slugs_for(p))
         self.assertIn("brainstorming", slugs)
         self.assertIn("superpowers:brainstorming", slugs)
@@ -61,7 +61,7 @@ class CatalogTests(unittest.TestCase):
         self.assertNotIn("5.0.7:brainstorming", slugs)
 
     def test_slugs_for_user_skill(self):
-        p = Path(".claude/skills/frontend-design/SKILL.md")
+        p = Path(".codex/skills/frontend-design/SKILL.md")
         self.assertEqual(_slugs_for(p), ["frontend-design"])
 
     def test_missing_skill_not_in_catalog(self):

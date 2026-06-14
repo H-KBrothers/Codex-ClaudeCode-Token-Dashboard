@@ -6,7 +6,7 @@ export default async function (root) {
     <div class="card">
       <h2>Suggestions</h2>
       ${tips.length === 0
-        ? '<p class="muted">No suggestions right now. Token Dashboard surfaces patterns weekly — check back after more activity.</p>'
+        ? '<p class="muted">No suggestions right now. H&K Dashboard surfaces patterns weekly — check back after more activity.</p>'
         : `<p class="muted" style="margin:-8px 0 14px">Rule-based pattern detection over the last 7 days. Dismissed tips re-appear after 14 days.</p>`}
       ${tips.map(t => `
         <div class="tip">

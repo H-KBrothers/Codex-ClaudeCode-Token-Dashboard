@@ -83,7 +83,7 @@ def repeated_target_tips(db_path, today_iso: Optional[str] = None) -> List[dict]
             out.append({
                 "key": key, "category": "repeat-file",
                 "title": f"{row['target']} read {row['n']} times",
-                "body": f"This file was opened {row['n']} times across {row['sessions']} sessions in the past 7 days. A summary in CLAUDE.md or one read per session would avoid repeats.",
+                "body": f"This file was opened {row['n']} times across {row['sessions']} sessions in the past 7 days. A short project note in AGENTS.md or one targeted read per session would avoid repeats.",
                 "scope": row["target"],
             })
         for row in c.execute("""
@@ -113,7 +113,7 @@ def right_size_tips(db_path, today_iso: Optional[str] = None) -> List[dict]:
              SUM(input_tokens+cache_create_5m_tokens+cache_create_1h_tokens) AS in_tok,
              SUM(output_tokens) AS out_tok
         FROM messages
-       WHERE type='assistant' AND model LIKE '%opus%'
+       WHERE type='assistant' AND (model LIKE '%gpt-5.5%' OR model LIKE '%frontier%')
          AND output_tokens < 500 AND is_sidechain = 0
          AND timestamp >= ?
     """
@@ -121,19 +121,19 @@ def right_size_tips(db_path, today_iso: Optional[str] = None) -> List[dict]:
         row = c.execute(sql, (since,)).fetchone()
     if not row or (row["n"] or 0) < 10:
         return []
-    api_opus   = ((row["in_tok"] or 0) * 15 + (row["out_tok"] or 0) * 75) / 1_000_000
-    api_sonnet = ((row["in_tok"] or 0) *  3 + (row["out_tok"] or 0) * 15) / 1_000_000
-    savings = api_opus - api_sonnet
-    if savings < 1.0:
+    api_frontier = ((row["in_tok"] or 0) * 5.00 + (row["out_tok"] or 0) * 30.00) / 1_000_000
+    api_mini = ((row["in_tok"] or 0) * 0.75 + (row["out_tok"] or 0) * 4.50) / 1_000_000
+    cost_gap = api_frontier - api_mini
+    if cost_gap < 1.0:
         return []
-    key = _key("right-size", "opus-short-turns-7d")
+    key = _key("right-size", "frontier-short-turns-7d")
     if _is_dismissed(db_path, key):
         return []
     return [{
         "key": key, "category": "right-size",
-        "title": f"{row['n']} short Opus turns might fit on Sonnet",
-        "body": f"Opus turns under 500 output tokens cost ~${api_opus:.2f} in the last 7 days. Sonnet would have cost ~${api_sonnet:.2f} (savings ~${savings:.2f}).",
-        "scope": "opus-short-turns-7d",
+        "title": f"{row['n']} short frontier turns might fit a smaller model",
+        "body": f"Short frontier-model turns cost ~${api_frontier:.2f} API-equivalent in the last 7 days. A mini-class model would be ~${api_mini:.2f} for similar token volume.",
+        "scope": "frontier-short-turns-7d",
     }]
 
 

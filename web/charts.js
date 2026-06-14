@@ -1,32 +1,37 @@
 // charts.js — themed ECharts wrappers
 
-const PALETTE = ['#4A9EFF', '#7C5CFF', '#3FB68B', '#E8A23B', '#E5484D', '#5BCEDA', '#F472B6'];
+const PALETTE = ['#C7A65A', '#64A7A0', '#8CBF75', '#D58A4B', '#DF6A61', '#A18BCE', '#7A94B8'];
 
 const BASE = {
-  textStyle: { color: '#E6EDF3', fontFamily: 'Inter' },
+  textStyle: { color: '#F2F0E8', fontFamily: 'ui-sans-serif' },
   color: PALETTE,
-  grid: { left: 36, right: 12, top: 24, bottom: 24, containLabel: true },
+  grid: { left: 38, right: 14, top: 28, bottom: 26, containLabel: true },
+  animation: true,
+  animationDuration: 760,
+  animationEasing: 'cubicOut',
+  animationDurationUpdate: 420,
+  animationEasingUpdate: 'cubicOut',
 };
 
 const X_AXIS = {
-  axisLine:  { lineStyle: { color: '#1F2630' } },
-  axisLabel: { color: '#8B98A6' },
+  axisLine:  { lineStyle: { color: '#2B2C30' } },
+  axisLabel: { color: '#A5A196' },
   axisTick:  { show: false },
 };
 
 const Y_AXIS = {
   axisLine:  { show: false },
   axisTick:  { show: false },
-  splitLine: { lineStyle: { color: '#1F2630' } },
-  axisLabel: { color: '#8B98A6' },
+  splitLine: { lineStyle: { color: '#2B2C30' } },
+  axisLabel: { color: '#A5A196' },
 };
 
 const TOOLTIP = {
   trigger: 'axis',
-  backgroundColor: '#0F1419',
-  borderColor: '#283040',
+  backgroundColor: '#161719',
+  borderColor: '#3A3B41',
   borderWidth: 1,
-  textStyle: { color: '#E6EDF3', fontFamily: 'Inter', fontSize: 12 },
+  textStyle: { color: '#F2F0E8', fontFamily: 'ui-sans-serif', fontSize: 12 },
   padding: [8, 12],
 };
 
@@ -41,12 +46,13 @@ export function lineChart(el, { x, series }) {
   c.setOption({
     ...BASE,
     tooltip: TOOLTIP,
-    legend: { textStyle: { color: '#8B98A6' }, top: 0, right: 0, icon: 'roundRect', itemWidth: 8, itemHeight: 8 },
+    legend: { textStyle: { color: '#A5A196' }, top: 0, right: 0, icon: 'roundRect', itemWidth: 8, itemHeight: 8 },
     xAxis: { ...X_AXIS, type: 'category', data: x, boundaryGap: false },
     yAxis: { ...Y_AXIS, type: 'value' },
-    series: series.map(s => ({
+    series: series.map((s, idx) => ({
       ...s, type: 'line', smooth: true, showSymbol: false,
       areaStyle: { opacity: 0.12 }, lineStyle: { width: 2 },
+      animationDelay: idx => idx * 16,
     })),
   });
   return c;
@@ -63,6 +69,8 @@ export function barChart(el, { categories, values, color }) {
       type: 'bar', data: values,
       itemStyle: { color: color || PALETTE[0], borderRadius: [4, 4, 0, 0] },
       barMaxWidth: 32,
+      animationDelay: idx => idx * 22,
+      animationDelayUpdate: idx => idx * 8,
     }],
   });
   return c;
@@ -78,7 +86,7 @@ export function stackedBarChart(el, { categories, series, formatter }) {
       valueFormatter: formatter || (v => Number(v).toLocaleString()),
     },
     legend: {
-      textStyle: { color: '#8B98A6' },
+      textStyle: { color: '#A5A196' },
       top: 0, right: 0, icon: 'roundRect',
       itemWidth: 8, itemHeight: 8,
     },
@@ -95,6 +103,8 @@ export function stackedBarChart(el, { categories, series, formatter }) {
       itemStyle: { color: s.color || PALETTE[i % PALETTE.length] },
       barMaxWidth: 24,
       emphasis: { focus: 'series' },
+      animationDelay: idx => idx * 14 + i * 80,
+      animationDelayUpdate: idx => idx * 5,
     })),
   });
   return c;
@@ -110,7 +120,7 @@ export function groupedBarChart(el, { categories, series, formatter }) {
       valueFormatter: formatter || (v => Number(v).toLocaleString()),
     },
     legend: {
-      textStyle: { color: '#8B98A6' },
+      textStyle: { color: '#A5A196' },
       top: 0, right: 0, icon: 'roundRect',
       itemWidth: 8, itemHeight: 8,
     },
@@ -126,33 +136,38 @@ export function groupedBarChart(el, { categories, series, formatter }) {
       itemStyle: { color: s.color || PALETTE[i % PALETTE.length], borderRadius: [4, 4, 0, 0] },
       barMaxWidth: 24,
       emphasis: { focus: 'series' },
+      animationDelay: idx => idx * 18 + i * 90,
+      animationDelayUpdate: idx => idx * 5,
     })),
   });
   return c;
 }
 
-export function donutChart(el, data) {
+export function donutChart(el, data, colors = PALETTE) {
   const c = mount(el);
   c.setOption({
-    color: PALETTE,
+    color: colors,
     tooltip: {
       trigger: 'item',
-      backgroundColor: '#0F1419', borderColor: '#283040', borderWidth: 1,
-      textStyle: { color: '#E6EDF3', fontFamily: 'Inter' },
+      backgroundColor: '#161719', borderColor: '#3A3B41', borderWidth: 1,
+      textStyle: { color: '#F2F0E8', fontFamily: 'ui-sans-serif' },
       formatter: p => `${p.name}<br/><b>${Number(p.value).toLocaleString()}</b> tokens (${p.percent.toFixed(1)}%)`,
     },
     legend: {
-      textStyle: { color: '#8B98A6' },
+      textStyle: { color: '#A5A196' },
       bottom: 10, icon: 'roundRect', itemWidth: 8, itemHeight: 8,
       type: 'scroll',
     },
     series: [{
       type: 'pie',
+      animationType: 'scale',
+      animationDuration: 820,
+      animationEasing: 'cubicOut',
       center: ['50%', '44%'],
       radius: ['48%', '68%'],
       avoidLabelOverlap: true,
       padAngle: 2,
-      itemStyle: { borderColor: '#0F1419', borderWidth: 2, borderRadius: 4 },
+      itemStyle: { borderColor: '#161719', borderWidth: 2, borderRadius: 4 },
       label: {
         show: true,
         position: 'inside',

@@ -27,7 +27,7 @@ class ServerTests(unittest.TestCase):
         init_db(self.db)
         with sqlite3.connect(self.db) as c:
             c.execute("INSERT INTO messages (uuid, parent_uuid, session_id, project_slug, type, timestamp, model, input_tokens, output_tokens, cache_read_tokens, cache_create_5m_tokens, cache_create_1h_tokens, prompt_text, prompt_chars) VALUES ('u',NULL,'s','p','user','2026-04-19T00:00:00Z',NULL,0,0,0,0,0,'hi',2)")
-            c.execute("INSERT INTO messages (uuid, parent_uuid, session_id, project_slug, type, timestamp, model, input_tokens, output_tokens, cache_read_tokens, cache_create_5m_tokens, cache_create_1h_tokens) VALUES ('a','u','s','p','assistant','2026-04-19T00:00:01Z','claude-haiku-4-5',1,1,0,0,0)")
+            c.execute("INSERT INTO messages (uuid, parent_uuid, session_id, project_slug, type, timestamp, model, input_tokens, output_tokens, cache_read_tokens, cache_create_5m_tokens, cache_create_1h_tokens) VALUES ('a','u','s','p','assistant','2026-04-19T00:00:01Z','gpt-5.5',1,1,1000000,0,0)")
             c.commit()
         self.port = _free_port()
         H = build_handler(self.db, projects_dir="/nonexistent")
@@ -42,12 +42,15 @@ class ServerTests(unittest.TestCase):
 
     def test_index_html(self):
         body = self._get("/")
-        self.assertIn(b"Token Dashboard", body)
+        self.assertIn(b"H&K Codex Dashboard", body)
 
     def test_overview_json(self):
         body = json.loads(self._get("/api/overview"))
         self.assertIn("sessions", body)
         self.assertEqual(body["sessions"], 1)
+        self.assertEqual(body["cache_read_tokens"], 1000000)
+        self.assertNotIn("cache_savings_tokens", body)
+        self.assertNotIn("cache_savings_usd", body)
 
     def test_prompts_json(self):
         body = json.loads(self._get("/api/prompts?limit=10"))
@@ -62,6 +65,13 @@ class ServerTests(unittest.TestCase):
         body = json.loads(self._get("/api/plan"))
         self.assertIn("plan", body)
         self.assertIn("pricing", body)
+
+    def test_config_json(self):
+        body = json.loads(self._get("/api/config"))
+        self.assertIn("sources", body)
+        self.assertIn("codex", body["sources"])
+        self.assertIn("claude", body["sources"])
+        self.assertEqual(body["sources"]["codex"]["root"], "/nonexistent")
 
     def test_head_returns_200_not_501(self):
         req = urllib.request.Request(f"http://127.0.0.1:{self.port}/", method="HEAD")

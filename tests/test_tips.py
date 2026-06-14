@@ -20,7 +20,7 @@ class CacheTipTests(unittest.TestCase):
             c.execute("""INSERT INTO messages (uuid, session_id, project_slug, type, timestamp,
                 model, input_tokens, output_tokens, cache_read_tokens,
                 cache_create_5m_tokens, cache_create_1h_tokens) VALUES
-                (?, 's', ?, 'assistant', ?, 'claude-opus-4-7', 100, 100, ?, ?, 0)""",
+                (?, 's', ?, 'assistant', ?, 'gpt-5.5', 100, 100, ?, ?, 0)""",
                 (f"uuid-{ts}", project, ts, cache_read, cache_create))
             c.commit()
 
@@ -42,7 +42,7 @@ class RepeatTipTests(unittest.TestCase):
         self.db = os.path.join(self.tmp, "t.db")
         init_db(self.db)
         with connect(self.db) as c:
-            c.execute("INSERT INTO messages (uuid, session_id, project_slug, type, timestamp, model) VALUES ('m1','s1','p','assistant','2026-04-15T00:00:00Z','claude-opus-4-7')")
+            c.execute("INSERT INTO messages (uuid, session_id, project_slug, type, timestamp, model) VALUES ('m1','s1','p','assistant','2026-04-15T00:00:00Z','gpt-5.5')")
             for i in range(15):
                 c.execute("INSERT INTO tool_calls (message_uuid, session_id, project_slug, tool_name, target, timestamp, is_error) VALUES ('m1','s1','p','Read','src/Root.tsx','2026-04-15T00:00:00Z',0)")
             for i in range(20):
@@ -62,10 +62,10 @@ class RightSizeTests(unittest.TestCase):
         self.db = os.path.join(self.tmp, "t.db")
         init_db(self.db)
 
-    def test_short_opus_turns_flagged(self):
+    def test_short_frontier_turns_flagged(self):
         with connect(self.db) as c:
             for i in range(10):
-                c.execute("INSERT INTO messages (uuid, session_id, project_slug, type, timestamp, model, input_tokens, output_tokens, cache_read_tokens, cache_create_5m_tokens, cache_create_1h_tokens, is_sidechain) VALUES (?, 's','p','assistant','2026-04-18T00:00:00Z','claude-opus-4-7', 1000000, 200, 0, 0, 0, 0)", (f"a{i}",))
+                c.execute("INSERT INTO messages (uuid, session_id, project_slug, type, timestamp, model, input_tokens, output_tokens, cache_read_tokens, cache_create_5m_tokens, cache_create_1h_tokens, is_sidechain) VALUES (?, 's','p','assistant','2026-04-18T00:00:00Z','gpt-5.5', 1000000, 200, 0, 0, 0, 0)", (f"a{i}",))
             c.commit()
         tips = right_size_tips(self.db, today_iso="2026-04-19T00:00:00")
         self.assertTrue(any(t["category"] == "right-size" for t in tips))
@@ -93,7 +93,7 @@ class DismissTests(unittest.TestCase):
         self.db = os.path.join(self.tmp, "t.db")
         init_db(self.db)
         with connect(self.db) as c:
-            c.execute("INSERT INTO messages (uuid, session_id, project_slug, type, timestamp, model, input_tokens, output_tokens, cache_read_tokens, cache_create_5m_tokens, cache_create_1h_tokens) VALUES ('m','s','projZ','assistant','2026-04-15T00:00:00Z','claude-opus-4-7', 100, 100, 10, 1000000, 0)")
+            c.execute("INSERT INTO messages (uuid, session_id, project_slug, type, timestamp, model, input_tokens, output_tokens, cache_read_tokens, cache_create_5m_tokens, cache_create_1h_tokens) VALUES ('m','s','projZ','assistant','2026-04-15T00:00:00Z','gpt-5.5', 100, 100, 10, 1000000, 0)")
             c.commit()
 
     def test_dismissed_tip_doesnt_reappear(self):

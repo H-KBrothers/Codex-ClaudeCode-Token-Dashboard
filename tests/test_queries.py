@@ -19,13 +19,13 @@ class QueryTests(unittest.TestCase):
         with connect(self.db) as c:
             c.executescript("""
             INSERT INTO messages (uuid, parent_uuid, session_id, project_slug, type, timestamp, model,
-              input_tokens, output_tokens, cache_read_tokens, cache_create_5m_tokens, cache_create_1h_tokens,
+              source, input_tokens, output_tokens, cache_read_tokens, cache_create_5m_tokens, cache_create_1h_tokens,
               prompt_text, prompt_chars)
             VALUES
-              ('u1',NULL,'s1','projA','user','2026-04-10T00:00:00Z',NULL,0,0,0,0,0,'big prompt',10),
-              ('a1','u1','s1','projA','assistant','2026-04-10T00:00:01Z','claude-opus-4-7',100,200,300,0,0,NULL,NULL),
-              ('u2',NULL,'s2','projB','user','2026-04-11T00:00:00Z',NULL,0,0,0,0,0,'small',5),
-              ('a2','u2','s2','projB','assistant','2026-04-11T00:00:01Z','claude-sonnet-4-6',5,5,0,0,0,NULL,NULL);
+              ('u1',NULL,'s1','projA','user','2026-04-10T00:00:00Z',NULL,'claude',0,0,0,0,0,'big prompt',10),
+              ('a1','u1','s1','projA','assistant','2026-04-10T00:00:01Z','claude-opus-4-7','claude',100,200,300,0,0,NULL,NULL),
+              ('u2',NULL,'s2','projB','user','2026-04-11T00:00:00Z',NULL,'codex',0,0,0,0,0,'small',5),
+              ('a2','u2','s2','projB','assistant','2026-04-11T00:00:01Z','gpt-5.4','codex',5,5,0,0,0,NULL,NULL);
             INSERT INTO tool_calls (message_uuid, session_id, project_slug, tool_name, target, timestamp, is_error)
             VALUES ('a1','s1','projA','Read','foo.py','2026-04-10T00:00:01Z',0),
                    ('a1','s1','projA','Bash','npm test','2026-04-10T00:00:01Z',0);
@@ -38,6 +38,14 @@ class QueryTests(unittest.TestCase):
         self.assertEqual(t["turns"], 2)
         self.assertEqual(t["input_tokens"], 105)
         self.assertEqual(t["output_tokens"], 205)
+
+    def test_overview_totals_respects_source(self):
+        codex = overview_totals(self.db, source="codex")
+        claude = overview_totals(self.db, source="claude")
+        self.assertEqual(codex["sessions"], 1)
+        self.assertEqual(codex["input_tokens"], 5)
+        self.assertEqual(claude["sessions"], 1)
+        self.assertEqual(claude["input_tokens"], 100)
 
     def test_expensive_prompts_orders_by_tokens(self):
         rows = expensive_prompts(self.db, limit=10)
@@ -87,12 +95,12 @@ class QueryTests(unittest.TestCase):
         rows = model_breakdown(self.db)
         models = {r["model"]: r for r in rows}
         self.assertIn("claude-opus-4-7", models)
-        self.assertIn("claude-sonnet-4-6", models)
+        self.assertIn("gpt-5.4", models)
         self.assertEqual(models["claude-opus-4-7"]["input_tokens"], 100)
 
         filtered = model_breakdown(self.db, since="2026-04-11T00:00:00Z")
         names = [r["model"] for r in filtered]
-        self.assertEqual(names, ["claude-sonnet-4-6"])
+        self.assertEqual(names, ["gpt-5.4"])
 
 
 class SkillBreakdownTests(unittest.TestCase):
@@ -143,8 +151,8 @@ class ProjectNameTests(unittest.TestCase):
 
     def test_basename_of_windows_cwd(self):
         self.assertEqual(
-            project_name_for(r"C:\Users\alice\projects\Token Dashboard", "anything"),
-            "Token Dashboard",
+            project_name_for(r"C:\Users\alice\projects\HK Dashboard", "anything"),
+            "HK Dashboard",
         )
 
     def test_trailing_slash_stripped(self):
@@ -175,10 +183,10 @@ class ProjectNameTests(unittest.TestCase):
     def test_walks_up_preserves_spaces(self):
         self.assertEqual(
             project_name_for(
-                r"C:\Users\alice\projects\Token Dashboard\src\subdir",
-                "C--Users-alice-projects-Token-Dashboard",
+                r"C:\Users\alice\projects\HK Dashboard\src\subdir",
+                "C--Users-alice-projects-HK-Dashboard",
             ),
-            "Token Dashboard",
+            "HK Dashboard",
         )
 
 

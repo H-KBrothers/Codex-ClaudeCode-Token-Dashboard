@@ -1,19 +1,32 @@
 {
   "models": {
-    "claude-opus-4-7":     { "tier": "opus",   "input": 15.00, "output": 75.00, "cache_read": 1.50, "cache_create_5m": 18.75, "cache_create_1h": 30.00 },
-    "claude-opus-4-6":     { "tier": "opus",   "input": 15.00, "output": 75.00, "cache_read": 1.50, "cache_create_5m": 18.75, "cache_create_1h": 30.00 },
-    "claude-sonnet-4-6":   { "tier": "sonnet", "input":  3.00, "output": 15.00, "cache_read": 0.30, "cache_create_5m":  3.75, "cache_create_1h":  6.00 },
-    "claude-haiku-4-5":    { "tier": "haiku",  "input":  1.00, "output":  5.00, "cache_read": 0.10, "cache_create_5m":  1.25, "cache_create_1h":  2.00 }
+    "gpt-5.5":      { "tier": "frontier", "input": 5.00, "output": 30.00, "cache_read": 0.50, "cache_create_5m": 5.00, "cache_create_1h": 5.00 },
+    "gpt-5.4":      { "tier": "large",    "input": 2.50, "output": 15.00, "cache_read": 0.25, "cache_create_5m": 2.50, "cache_create_1h": 2.50 },
+    "gpt-5.4-mini": { "tier": "mini",     "input": 0.75, "output":  4.50, "cache_read": 0.075, "cache_create_5m": 0.75, "cache_create_1h": 0.75 },
+    "claude-fable-5":  { "tier": "claude_fable",  "input": 10.00, "output": 50.00, "cache_read": 1.00, "cache_create_5m": 12.50, "cache_create_1h": 20.00 },
+    "claude-mythos-5": { "tier": "claude_fable",  "input": 10.00, "output": 50.00, "cache_read": 1.00, "cache_create_5m": 12.50, "cache_create_1h": 20.00 },
+    "claude-opus-4-8": { "tier": "claude_opus",   "input": 5.00,  "output": 25.00, "cache_read": 0.50, "cache_create_5m": 6.25,  "cache_create_1h": 10.00 },
+    "claude-opus-4-7": { "tier": "claude_opus",   "input": 5.00,  "output": 25.00, "cache_read": 0.50, "cache_create_5m": 6.25,  "cache_create_1h": 10.00 },
+    "claude-opus-4-6": { "tier": "claude_opus",   "input": 5.00,  "output": 25.00, "cache_read": 0.50, "cache_create_5m": 6.25,  "cache_create_1h": 10.00 },
+    "claude-sonnet-4-6": { "tier": "claude_sonnet", "input": 3.00, "output": 15.00, "cache_read": 0.30, "cache_create_5m": 3.75, "cache_create_1h": 6.00 },
+    "claude-sonnet-4-5": { "tier": "claude_sonnet", "input": 3.00, "output": 15.00, "cache_read": 0.30, "cache_create_5m": 3.75, "cache_create_1h": 6.00 },
+    "claude-haiku-4-5": { "tier": "claude_haiku", "input": 1.00, "output": 5.00, "cache_read": 0.10, "cache_create_5m": 1.25, "cache_create_1h": 2.00 },
+    "claude-haiku-4-5-20251001": { "tier": "claude_haiku", "input": 1.00, "output": 5.00, "cache_read": 0.10, "cache_create_5m": 1.25, "cache_create_1h": 2.00 }
   },
   "tier_fallback": {
-    "opus":   { "input": 15.00, "output": 75.00, "cache_read": 1.50, "cache_create_5m": 18.75, "cache_create_1h": 30.00 },
-    "sonnet": { "input":  3.00, "output": 15.00, "cache_read": 0.30, "cache_create_5m":  3.75, "cache_create_1h":  6.00 },
-    "haiku":  { "input":  1.00, "output":  5.00, "cache_read": 0.10, "cache_create_5m":  1.25, "cache_create_1h":  2.00 }
+    "frontier": { "input": 5.00, "output": 30.00, "cache_read": 0.50, "cache_create_5m": 5.00, "cache_create_1h": 5.00 },
+    "large":    { "input": 2.50, "output": 15.00, "cache_read": 0.25, "cache_create_5m": 2.50, "cache_create_1h": 2.50 },
+    "mini":     { "input": 0.75, "output":  4.50, "cache_read": 0.075, "cache_create_5m": 0.75, "cache_create_1h": 0.75 },
+    "claude_fable":  { "input": 10.00, "output": 50.00, "cache_read": 1.00, "cache_create_5m": 12.50, "cache_create_1h": 20.00 },
+    "claude_opus":   { "input": 5.00,  "output": 25.00, "cache_read": 0.50, "cache_create_5m": 6.25,  "cache_create_1h": 10.00 },
+    "claude_sonnet": { "input": 3.00,  "output": 15.00, "cache_read": 0.30, "cache_create_5m": 3.75,  "cache_create_1h": 6.00 },
+    "claude_haiku":  { "input": 1.00,  "output": 5.00,  "cache_read": 0.10, "cache_create_5m": 1.25,  "cache_create_1h": 2.00 }
   },
   "plans": {
-    "api":     { "monthly": 0,   "label": "API (pay-per-token)" },
-    "pro":     { "monthly": 20,  "label": "Pro" },
-    "max":     { "monthly": 100, "label": "Max" },
-    "max-20x": { "monthly": 200, "label": "Max 20x" }
+    "codex-free": { "monthly": 0,   "label": "Codex Free", "api_equivalent_only": true },
+    "api":        { "monthly": 0,   "label": "API equivalent" },
+    "chatgpt-plus": { "monthly": 20,  "label": "ChatGPT Plus" },
+    "chatgpt-pro":  { "monthly": 200, "label": "ChatGPT Pro" },
+    "business":   { "monthly": 25,  "label": "ChatGPT Business" }
   }
 }

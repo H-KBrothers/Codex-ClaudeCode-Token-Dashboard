@@ -1,29 +1,27 @@
 # Known Limitations
 
-None of these are blockers — the dashboard still gives you useful information. They're the rough edges you'll notice if you look hard.
+None of these are blockers; they are the rough edges to keep in mind when reading the numbers.
 
-## Skills token counts are partial
+## Skills Token Counts Are Partial
 
-The Skills route shows every skill Claude Code invoked, how many times, across how many sessions, and when. The **tokens-per-call** column is populated only for skills whose `SKILL.md` lives under `~/.claude/skills/`, `~/.claude/scheduled-tasks/`, or `~/.claude/plugins/`. Skills registered elsewhere (project-local `.claude/skills/`, or invocations that go through the `Task` tool with a skill-shaped `subagent_type`) show invocation counts but leave the token column blank.
+The Skills route shows skill invocations when they appear as tool calls and can enrich them from local `SKILL.md` files under `~/.codex/skills` and `~/.codex/plugins`. If a skill is loaded through another mechanism or a slug cannot be matched to disk, invocation counts may still appear while `tokens_per_call` stays blank.
 
-It's still a useful view — you can see which skills dominate your session time — just don't expect a complete per-skill token cost. PRs to broaden the catalog scan welcome.
+## Cost Is API-Equivalent
 
-## Cost for Pro / Max / Max-20x users is shown as API-equivalent, not subscription value
+Codex is often used through a ChatGPT subscription or entitlement. The Overview cost number estimates what the same token volume would cost at API rates from `pricing.json`; it is not a statement that you were billed that amount.
 
-The Settings route lets you select your pricing plan, but the Overview cost number is always the API-equivalent (what the same usage would have cost on pay-per-token rates). If you're on Pro you pay a flat $20/month regardless of how much of that API-equivalent number you rack up. We don't do "subscription ROI" math yet — Anthropic doesn't publish per-plan rate limits as public JSON, and faking it would be worse than not doing it.
+## Internal Model Slugs Need Pricing Overrides
 
-## Cowork sessions are invisible
+Codex may log internal or product-specific model IDs such as review models. If a model is not listed in `pricing.json`, the dashboard falls back to a broad tier inferred from the model name and marks the cost as estimated. Add exact rates to `pricing.json` when you need precise accounting.
 
-If you use Claude's Cowork mode (server-side sessions, not local `claude` CLI), those sessions don't write JSONL to `~/.claude/projects/` and the dashboard can't see them.
+## Some Server-Side Or Cloud Sessions May Be Invisible
 
-## Non-standard model names get tier-fallback pricing
+The scanner reads local JSONL files under `~/.codex/sessions`. Work that does not write local rollout files cannot be shown.
 
-If a transcript references a model ID not in `pricing.json` (e.g. a future snapshot that isn't in our table yet), cost is estimated from the tier substring (`opus` / `sonnet` / `haiku`) in the name. The UI marks these as `estimated: true`. If the model name contains none of those substrings, cost is reported as null.
+## First Scan Can Be Slow
 
-## First scan can be slow
+The first scan on a heavy machine can read many JSONL files. Subsequent scans are incremental using mtime and byte-offset tracking in the `files` table.
 
-The first `python3 cli.py scan` on a heavy user's machine can read tens of MB across hundreds of JSONLs. Subsequent scans are incremental (mtime + byte-offset tracking in the `files` table), so they're fast.
+## Run One Dashboard Per DB
 
-## Running two dashboards against the same DB
-
-Both will fight over the SQLite file and you'll see inconsistent numbers and occasional `database is locked` errors. Only run one at a time. If you want to view the dashboard from a second device, use `HOST=0.0.0.0` on the one running machine and point the second device's browser at it.
+Two dashboard processes pointed at the same SQLite file can fight over writes. Run one server per DB. If you need access from another device, start one process with an intentional `HOST` override on a trusted network.

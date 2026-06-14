@@ -14,10 +14,11 @@ from .db import (
     overview_totals, expensive_prompts, project_summary,
     tool_token_breakdown, recent_sessions, session_turns,
     daily_token_breakdown, model_breakdown, skill_breakdown,
+    source_summary,
 )
 from .pricing import load_pricing, cost_for, get_plan, set_plan
 from .tips import all_tips, dismiss_tip
-from .scanner import scan_dir
+from .scanner import scan_roots
 from .skills import cached_catalog
 
 
@@ -68,7 +69,12 @@ def _serve_static(handler, rel: str) -> None:
     handler.wfile.write(body)
 
 
-def build_handler(db_path: str, projects_dir: str):
+def _source(qs: dict):
+    value = (qs.get("source", [None])[0] or "").lower()
+    return value if value in ("codex", "claude") else None
+
+
+def build_handler(db_path: str, projects_dir: str, claude_projects_dir: str = None):
     pricing = load_pricing(PRICING_JSON)
 
     class H(http.server.BaseHTTPRequestHandler):
@@ -84,23 +90,40 @@ def build_handler(db_path: str, projects_dir: str):
             path = url.path
             since = qs.get("since", [None])[0]
             until = qs.get("until", [None])[0]
+            source = _source(qs)
             if path in ("/", "/index.html"):
                 return _serve_static(self, "index.html")
             if path.startswith("/web/"):
                 return _serve_static(self, path[5:])
             if path == "/api/overview":
-                totals = overview_totals(db_path, since, until)
+                totals = overview_totals(db_path, since, until, source=source)
                 cost_usd = 0.0
-                for m in model_breakdown(db_path, since, until):
+                for m in model_breakdown(db_path, since, until, source=source):
                     c = cost_for(m["model"], m, pricing)
                     if c["usd"] is not None:
                         cost_usd += c["usd"]
                 totals["cost_usd"] = round(cost_usd, 4)
                 return _send_json(self, totals)
+            if path == "/api/sources":
+                return _send_json(self, source_summary(db_path))
+            if path == "/api/config":
+                source_roots = {
+                    "codex": Path(projects_dir).expanduser(),
+                    "claude": Path(claude_projects_dir or Path.home() / ".claude" / "projects").expanduser(),
+                }
+                return _send_json(self, {
+                    "sources": {
+                        key: {
+                            "root": str(root),
+                            "exists": root.exists(),
+                        }
+                        for key, root in source_roots.items()
+                    }
+                })
             if path == "/api/prompts":
                 limit = _clamp_limit(qs.get("limit", ["50"])[0], 50)
                 sort = qs.get("sort", ["tokens"])[0]
-                rows = expensive_prompts(db_path, limit=limit, sort=sort)
+                rows = expensive_prompts(db_path, limit=limit, sort=sort, source=source)
                 for r in rows:
                     c = cost_for(r["model"], {
                         "input_tokens": 0, "output_tokens": 0,
@@ -110,25 +133,25 @@ def build_handler(db_path: str, projects_dir: str):
                     r["estimated_cost_usd"] = c["usd"]
                 return _send_json(self, rows)
             if path == "/api/projects":
-                return _send_json(self, project_summary(db_path, since, until))
+                return _send_json(self, project_summary(db_path, since, until, source=source))
             if path == "/api/tools":
-                return _send_json(self, tool_token_breakdown(db_path, since, until))
+                return _send_json(self, tool_token_breakdown(db_path, since, until, source=source))
             if path == "/api/sessions":
                 return _send_json(self, recent_sessions(
                     db_path, limit=_clamp_limit(qs.get("limit", ["20"])[0], 20),
-                    since=since, until=until,
+                    since=since, until=until, source=source,
                 ))
             if path == "/api/daily":
-                return _send_json(self, daily_token_breakdown(db_path, since, until))
+                return _send_json(self, daily_token_breakdown(db_path, since, until, source=source))
             if path == "/api/skills":
-                rows = skill_breakdown(db_path, since, until)
+                rows = skill_breakdown(db_path, since, until, source=source)
                 catalog = cached_catalog()
                 for r in rows:
                     info = catalog.get(r["skill"])
                     r["tokens_per_call"] = info["tokens"] if info else None
                 return _send_json(self, rows)
             if path == "/api/by-model":
-                rows = model_breakdown(db_path, since, until)
+                rows = model_breakdown(db_path, since, until, source=source)
                 for r in rows:
                     c = cost_for(r["model"], r, pricing)
                     r["cost_usd"] = c["usd"]
@@ -136,13 +159,13 @@ def build_handler(db_path: str, projects_dir: str):
                 return _send_json(self, rows)
             if path.startswith("/api/sessions/"):
                 sid = path.rsplit("/", 1)[1]
-                return _send_json(self, session_turns(db_path, sid))
+                return _send_json(self, session_turns(db_path, sid, source=source))
             if path == "/api/tips":
                 return _send_json(self, all_tips(db_path))
             if path == "/api/plan":
                 return _send_json(self, {"plan": get_plan(db_path), "pricing": pricing})
             if path == "/api/scan":
-                n = scan_dir(projects_dir, db_path)
+                n = scan_roots(projects_dir, db_path, claude_projects_dir)
                 return _send_json(self, n)
             if path == "/api/stream":
                 self.send_response(200)
@@ -190,10 +213,10 @@ def build_handler(db_path: str, projects_dir: str):
     return H
 
 
-def _scan_loop(db_path: str, projects_dir: str, interval: float = 30.0):
+def _scan_loop(db_path: str, projects_dir: str, claude_projects_dir: str = None, interval: float = 30.0):
     while True:
         try:
-            n = scan_dir(projects_dir, db_path)
+            n = scan_roots(projects_dir, db_path, claude_projects_dir)
             if n["messages"] > 0:
                 EVENTS.put({"type": "scan", "n": n, "ts": time.time()})
         except Exception as e:
@@ -201,8 +224,8 @@ def _scan_loop(db_path: str, projects_dir: str, interval: float = 30.0):
         time.sleep(interval)
 
 
-def run(host: str, port: int, db_path: str, projects_dir: str):
-    threading.Thread(target=_scan_loop, args=(db_path, projects_dir), daemon=True).start()
-    H = build_handler(db_path, projects_dir)
+def run(host: str, port: int, db_path: str, projects_dir: str, claude_projects_dir: str = None):
+    threading.Thread(target=_scan_loop, args=(db_path, projects_dir, claude_projects_dir), daemon=True).start()
+    H = build_handler(db_path, projects_dir, claude_projects_dir)
     httpd = http.server.ThreadingHTTPServer((host, port), H)
     httpd.serve_forever()

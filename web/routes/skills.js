@@ -1,4 +1,4 @@
-import { api, fmt } from '/web/app.js';
+import { api, fmt, state } from '/web/app.js';
 import { barChart } from '/web/charts.js';
 
 const RANGES = [
@@ -27,6 +27,7 @@ function sinceIso(range) {
 
 export default async function (root) {
   const range = readRange();
+  const p = state.palette;
   const since = sinceIso(range);
   const url = '/api/skills' + (since ? '?since=' + encodeURIComponent(since) : '');
   const skills = await api(url);
@@ -59,7 +60,7 @@ export default async function (root) {
 
     <div class="card" style="margin-top:16px">
       <h3>All skills</h3>
-      <p class="muted" style="margin:-4px 0 14px;font-size:12px">"Tokens per call" is the size of the skill's <code>SKILL.md</code> file — what Claude Code loads into context each time the skill is invoked.</p>
+      <p class="muted" style="margin:-4px 0 14px;font-size:12px">"Tokens per call" is estimated from the skill's <code>SKILL.md</code> size when the invoked slug can be matched to a local Codex skill.</p>
       <table>
         <thead><tr>
           <th>skill</th>
@@ -90,6 +91,6 @@ export default async function (root) {
   barChart(document.getElementById('ch-skills'), {
     categories: top.map(t => t.skill.length > 26 ? t.skill.slice(0, 25) + '…' : t.skill),
     values: top.map(t => t.invocations),
-    color: '#3FB68B',
+    color: p.accent,
   });
 }

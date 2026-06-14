@@ -14,14 +14,24 @@ def load_pricing(path: Union[str, Path]) -> dict:
 
 def _tier_from_name(model: str) -> Optional[str]:
     m = (model or "").lower()
-    for tier in ("opus", "sonnet", "haiku"):
-        if tier in m:
-            return tier
+    if "haiku" in m:
+        return "claude_haiku"
+    if "sonnet" in m:
+        return "claude_sonnet"
+    if "opus" in m:
+        return "claude_opus"
+    if "fable" in m or "mythos" in m:
+        return "claude_fable"
+    if "mini" in m or "nano" in m:
+        return "mini"
+    if "gpt-5.5" in m:
+        return "frontier"
+    if "gpt-5" in m or "codex" in m or m.startswith("o"):
+        return "large"
     return None
 
 
-def cost_for(model: str, usage: dict, pricing: dict) -> dict:
-    """Return {usd, estimated, breakdown}. usd=None when no tier match."""
+def _rates_for(model: str, pricing: dict) -> tuple[Optional[dict], bool]:
     rates = pricing["models"].get(model)
     estimated = False
     if rates is None:
@@ -30,7 +40,15 @@ def cost_for(model: str, usage: dict, pricing: dict) -> dict:
             rates = pricing["tier_fallback"][tier]
             estimated = True
         else:
-            return {"usd": None, "estimated": True, "breakdown": {}}
+            return None, True
+    return rates, estimated
+
+
+def cost_for(model: str, usage: dict, pricing: dict) -> dict:
+    """Return {usd, estimated, breakdown}. usd=None when no tier match."""
+    rates, estimated = _rates_for(model, pricing)
+    if rates is None:
+        return {"usd": None, "estimated": True, "breakdown": {}}
     bd = {
         "input":           usage["input_tokens"]            * rates["input"]           / 1_000_000,
         "output":          usage["output_tokens"]           * rates["output"]          / 1_000_000,
@@ -41,7 +59,7 @@ def cost_for(model: str, usage: dict, pricing: dict) -> dict:
     return {"usd": round(sum(bd.values()), 6), "estimated": estimated, "breakdown": bd}
 
 
-def get_plan(db_path: Union[str, Path], default: str = "api") -> str:
+def get_plan(db_path: Union[str, Path], default: str = "codex-free") -> str:
     with connect(db_path) as c:
         row = c.execute("SELECT v FROM plan WHERE k='plan'").fetchone()
     return row["v"] if row else default
@@ -55,8 +73,14 @@ def set_plan(db_path: Union[str, Path], plan: str) -> None:
 
 def format_for_user(api_cost_usd: float, plan: str, pricing: dict) -> dict:
     p = pricing["plans"].get(plan, pricing["plans"]["api"])
-    if plan == "api" or p["monthly"] == 0:
+    if plan == "api":
         return {"display_usd": api_cost_usd, "subtitle": None, "subscription_usd": None}
+    if p["monthly"] == 0:
+        return {
+            "display_usd": api_cost_usd,
+            "subtitle": f"{p['label']} selected; dollar amount is API-equivalent only",
+            "subscription_usd": 0,
+        }
     return {
         "display_usd":      api_cost_usd,
         "subtitle":         f"You pay ${p['monthly']}/mo on {p['label']}",

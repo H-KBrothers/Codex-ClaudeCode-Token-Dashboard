@@ -1,11 +1,10 @@
 """Skill catalog: locate SKILL.md files and map slugs to file sizes.
 
 A skill on disk lives at one of:
-  ~/.claude/skills/<name>/SKILL.md                     -> slug "<name>"
-  ~/.claude/scheduled-tasks/<name>/SKILL.md            -> slug "<name>"
-  ~/.claude/plugins/marketplaces/*/plugins/<plugin>/skills/<name>/SKILL.md
+  ~/.codex/skills/<name>/SKILL.md                      -> slug "<name>"
+  ~/.codex/plugins/.../skills/<name>/SKILL.md
       -> registers TWO slugs: "<plugin>:<name>" and "<name>"
-      (Claude Code accepts either form in the Skill tool.)
+      (Codex accepts either form in the Skill tool.)
 
 Sizes are in chars; token estimate is chars // 4 (the same approximation
 `scanner._extract_results` uses for tool-result tokens).
@@ -17,16 +16,15 @@ from pathlib import Path
 from typing import Dict, Optional
 
 _DEFAULT_ROOTS = [
-    Path.home() / ".claude" / "skills",
-    Path.home() / ".claude" / "scheduled-tasks",
-    Path.home() / ".claude" / "plugins",
+    Path.home() / ".codex" / "skills",
+    Path.home() / ".codex" / "plugins",
 ]
 
 
 import re
 
 _VERSION_RE = re.compile(r"^\d+\.\d+")
-_STRUCTURE_NAMES = {"skills", "plugins", "marketplaces", "cache", ".claude"}
+_STRUCTURE_NAMES = {"skills", "plugins", "marketplaces", "cache", ".codex"}
 
 
 def _slugs_for(skill_md: Path) -> list[str]:
@@ -37,8 +35,6 @@ def _slugs_for(skill_md: Path) -> list[str]:
       cache/<m>/<plugin>/<version>/skills/<skill>/SKILL.md
       cache/temp_git_*/skills/<skill>/SKILL.md         (no plugin)
       skills/<skill>/SKILL.md                          (no plugin)
-      scheduled-tasks/<skill>/SKILL.md                 (no plugin)
-
     Strategy: always register the bare skill name. Additionally, walk up from
     `skills/` and register `<ancestor>:<skill>` for every ancestor segment
     that plausibly names a plugin (not a structural/version/temp-dir token).
