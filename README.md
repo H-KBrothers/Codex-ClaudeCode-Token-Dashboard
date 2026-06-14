@@ -32,9 +32,10 @@ Maintained as an H&K Brothers tool.
 
 No `pip install`, no Node.js, no build step.
 
-## Quickstart
+## Installation & Quickstart
 
 ```bash
+git clone https://github.com/H-KBrothers/Codex-ClaudeCode-Token-Dashboard.git
 cd Codex-ClaudeCode-Token-Dashboard
 python3 cli.py dashboard
 ```
