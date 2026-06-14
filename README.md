@@ -6,6 +6,16 @@ Everything runs locally. No telemetry, no login, no remote calls for your sessio
 
 Maintained as an H&K Brothers tool.
 
+## Screenshots
+
+### Codex overview
+
+![H&K Codex Dashboard overview](docs/images/codex-overview.png)
+
+### Claude Code overview
+
+![H&K Claude Code Dashboard overview](docs/images/claude-code-overview.png)
+
 ## What this is useful for
 
 - Seeing which prompts and sessions consume the most tokens.
